@@ -329,7 +329,18 @@
       </xsl:choose>
       <xsl:apply-templates select="dcat:dataset|dcat:service"/>
 
-      <xsl:apply-templates select="dcatap:applicableLegislation"/>
+      <xsl:variable name="isHealthDataset"
+                    select="count(.[dcat:record/*/dct:conformsTo/*/@rdf:about = 'https://healthdataeu.pages.code.europa.eu/healthdcat-ap/releases/release-8/']) = 1"/>
+      <xsl:choose>
+        <xsl:when test="$isHealthDataset">
+          <dcatap:applicableLegislation rdf:resource="http://data.europa.eu/eli/reg/2025/327/oj"/>
+          <xsl:apply-templates select="dcatap:applicableLegislation[@rdf:resource != 'http://data.europa.eu/eli/reg/2025/327/oj']"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:apply-templates select="dcatap:applicableLegislation"/>
+        </xsl:otherwise>
+      </xsl:choose>
+
     </dcat:Catalog>
   </xsl:template>
 
@@ -363,7 +374,15 @@
   <xsl:template match="dcat:Dataset|dcat:DataService|dcat:DatasetSeries" priority="10">
      <xsl:copy copy-namespaces="no">
        <xsl:call-template name="handle-resource-id"/>
-       <xsl:apply-templates select="* except dct:identifier"/>
+       <xsl:apply-templates select="* except (dct:identifier|healthdcatap:hasStructuredData)"/>
+
+       <xsl:variable name="isHealthDataset"
+                     select="name() = 'dcat:Dataset'
+                             and ancestor::dcat:Catalog[dcat:record/*/dct:conformsTo/*/@rdf:about = 'https://healthdataeu.pages.code.europa.eu/healthdcat-ap/releases/release-8/']"/>
+       <xsl:if test="$isHealthDataset">
+         <xsl:variable name="hasVariable" select="exists(healthdcatap:hasVariables)"/>
+         <healthdcatap:hasStructuredData><xsl:value-of select="if ($hasVariable) then 'true' else 'false'"/></healthdcatap:hasStructuredData>
+       </xsl:if>
      </xsl:copy>
   </xsl:template>
 
